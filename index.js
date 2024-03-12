@@ -157,22 +157,17 @@ app.post("/itrack/emit", async (req, res)=> {
 })
 
 app.post("/itrack/sign-in", async (req, res) => {
-    // console.log(req.body)
-    // console.log(await iTrackUsers.find())
     try{
-        
        let user = await iTrackUsers.find({email: req.body.email })
-    //    console.log(user)
-       let encryptPassword = await bcrypt.compare(req.body.password,user[0].password)
+       let encryptPassword = await bcrypt.compare(req.body.password, user[0].password)
        if ((user.length >= 1) && (encryptPassword) ) {
         res.status(200).send({message: user[0]})
        } else {
         res.status(201).send({message: "No Such User"})
        }
-    } catch(error) {
-        res.status(500).send({message: "Error Logging In"})
+    }catch(error) {
+        res.status(500).send({message: "Error Signing In.Connectivity Issues." })
     }
-   
 })
 
 
