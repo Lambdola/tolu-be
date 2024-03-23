@@ -157,6 +157,7 @@ app.post("/itrack/emit", async (req, res)=> {
 })
 
 app.post("/itrack/sign-in", async (req, res) => {
+    console.log(req.body)
     try{
        let user = await iTrackUsers.find({email: req.body.email })
        let encryptPassword = await bcrypt.compare(req.body.password, user[0].password)
