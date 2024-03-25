@@ -61,21 +61,17 @@ io.on("connection", (socket)=>{
             let currentDate = new Date().toLocaleDateString('en-GB')
             let transaction = await Transact.find()
             let newTransaction = transaction.filter(items=> JSON.parse(items.seller).email === data.email )
-            // let trans = await Transact.find()
             for (let items of newTransaction) {
                 let dueDate = items.duePayDate.split("-").reverse().join("/")
-                // console.log(dueDate)
                 if (dueDate === currentDate) {
                     dueArr.push(items)
                 }
             }
             if (dueArr.length >= 1) {
-                // console.log(dueArr)
+
                 io.emit("message", {message: dueArr})
-                // res.status(200).send({message: dueArr})
             } else {
                 io.emit("message", "")
-                // res.status(201).send({message: ""})
             }
             
         } catch(error) {
@@ -90,8 +86,8 @@ app.get("/", (req, res)=> {
     res.status(200).send("Hello,iTrack: Enyo, Dorcas, Ola")
 })
 
-app.post("/itrack/dashboard", async (req,res)=> {
-    // console.log(req.body)
+app.post("/itrack/analytics", async (req,res)=> {
+    console.log(req.body)
     try {
         let customers = await iTrackCustomers.find({sellerEmail: req.body.sellerEmail})
         let totalCustomers = customers.length >= 1 ? customers.length : 0
@@ -126,7 +122,6 @@ app.post("/itrack/dashboard", async (req,res)=> {
         res.status(200).send({ message: dashboardObj})
     } catch(error) {
         res.status(500).send({message: "Error"})
-        console.log(error)
     }
 })
 
@@ -136,10 +131,8 @@ app.post("/itrack/emit", async (req, res)=> {
         let currentDate = new Date().toLocaleDateString('en-GB')
         let transaction = await Transact.find()
         let newTransaction = transaction.filter(items=> JSON.parse(items.seller).email === req.body.sellerEmail )
-        // let trans = await Transact.find()
         for (let items of newTransaction) {
             let dueDate = items.duePayDate.split("-").reverse().join("/")
-            // console.log(dueDate)
             if (dueDate === currentDate) {
                 dueArr.push(items)
             }
@@ -162,12 +155,12 @@ app.post("/itrack/sign-in", async (req, res) => {
        let user = await iTrackUsers.find({email: req.body.email })
        let encryptPassword = await bcrypt.compare(req.body.password, user[0].password)
        if ((user.length >= 1) && (encryptPassword) ) {
-        res.status(200).send({message: user[0]})
+        res.status(200).send({message: user[0]._id})
        } else {
         res.status(201).send({message: "No Such User"})
        }
     }catch(error) {
-        res.status(500).send({message: "Error Signing In.Connectivity Issues." })
+        res.status(500).send({message: "Error Signing In. Connectivity Issues." })
     }
 })
 
@@ -187,35 +180,34 @@ app.post("/itrack/customers", async (req,res) => {
             })
         }
     } catch(error) {
+        res.status(500).send({message: "Error. Connectivity Issues." })
         console.log(error)
     }
 })
 
 
 app.post("/itrack/create-customer", async (req,res) => {
-    // console.log(req.body)
-    // await iTrackCustomers.deleteMany()
-    
     try {
-        
-        let newCustomer = await iTrackCustomers.create(req.body)
-        // console.log("NN")
-        console.log(newCustomer)
-        res.status(200).send({ message: newCustomer } )
+        let customer = await iTrackCustomers.find({email: req.body.email})
+        if (customer) {
+            res.status(201).send({ message: "Customer Already Exists" } );
+            return;
+        }
+        let newCustomer = await iTrackCustomers.create(req.body);
+        if (newCustomer) {
+            res.status(200).send({ message: newCustomer } )
+        }
     } catch (error) {
-        console.log(error)
         res.status(500).send({ message: "Error Creating New Customer" } )
     }
 })
 
-// app.get("/delete")
-
-app.post("/itrack/create-user", async (req, res)=>{
+app.post("/itrack/create-user", async (req, res)=> {
     try{
-        // console.log(req.body)
         let user = await iTrackUsers.find({email: req.body.email})
         if(user.length >= 1) {
-            res.status(203).send({message: "User Already Exists"})
+            res.status(201).send({message: "User Already Exists"})
+            return
         } else {
             let encrpytPassword = await bcrypt.hash(req.body.password, 10)
             let newUser = await iTrackUsers.create({...req.body, password: encrpytPassword })
@@ -225,10 +217,9 @@ app.post("/itrack/create-user", async (req, res)=>{
                 res.status(201).send({message: "Unsuccessful"})
             }
         }
-       
     } catch(error) {
         console.log(error)
-        res.status(500).send({message: "oops"})
+        res.status(500).send({message: "Error Creating New User"})
     } 
 })
 
@@ -238,7 +229,6 @@ app.post("/itrack/transactions", async (req,res) => {
     try {
         let transaction = await Transact.find()
         let newTransaction = transaction.filter(items=> JSON.parse(items.seller).email === req.body.sellerEmail )
-        // console.log(newTransaction)
         if (!newTransaction || newTransaction.length < 1) {
             res.status(201).send({message: "No Transaction Recorded"})
         } else {
@@ -246,6 +236,7 @@ app.post("/itrack/transactions", async (req,res) => {
         }
     } catch(error) {
         console.log(error)
+        res.status(500).send({message: "Error Getting Transactions History"})
     }
 })
 
@@ -301,8 +292,6 @@ app.post("/itrack/portal-payment", async (req, res) => {
 })
 
 app.post("/itrack/invoice-payment-link", async (req,res) => {
-    // console.log(req.body)
-   
     const seller = req.body.seller
     const customer = req.body.customer
     const products = req.body.products
